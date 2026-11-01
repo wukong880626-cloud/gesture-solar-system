@@ -6,6 +6,8 @@
 
 项目仓库：[wukong880626-cloud/gesture-solar-system](https://github.com/wukong880626-cloud/gesture-solar-system)。
 
+正式入口：[手势太阳系互动课堂](https://wukong880626-cloud.github.io/gesture-solar-system/)。保留的[冻结预览](https://wukong880626-cloud.github.io/gesture-solar-system/preview/b106dbe1b04b/)与本次正式运行版本具有相同指纹；验收来源与限制见[验收记录](docs/ACCEPTANCE.md)。
+
 ## 可以做什么
 
 - 浏览太阳、八大行星、月球、土星环和小行星带。
@@ -44,6 +46,12 @@
 - 静态托管需原样提供全部资源，正确返回 JavaScript 模块和 `.wasm` 的内容类型；不要把不存在的资源重写成 `index.html`。
 - `python -m http.server` 仅用于本地预览，不是生产服务器。本示例绑定回环地址，不会直接开放给局域网其他设备。
 - 应用运行资源都已随仓库提供，不依赖 CDN 实时下载。完整下载后可在断开外网、保留本地服务的情况下使用；这不代表部署后的网页具备 Service Worker 离线缓存。
+
+### GitHub Pages 项目子目录
+
+项目使用站点内相对路径，支持 `https://wukong880626-cloud.github.io/gesture-solar-system/` 这样的项目子目录。保留末尾 `/`，并完整保留 `vendor/`、`textures/`；不要把 import map、模型或 WASM 地址改成以 `/vendor/` 或 `/textures/` 开头的站点根路径。
+
+当前仓库的 Pages 来源是 `main` 分支根目录。推送到该来源会自动更新公网。2026-11-01维护者反馈冻结候选的手机/Safari、真实手势和关闭/后台停止均正常，并明确要求正式更新；本次首页提升保持同一候选的运行文件字节，保留预览及第三方归属。证据来源与未覆盖范围见[验收记录](docs/ACCEPTANCE.md)。
 
 ## 操作说明
 
@@ -88,7 +96,11 @@
 
 场景中的**天体尺寸、轨道距离、运行速度、初始位置和光照效果经过教学可视化处理**，不按统一真实比例，也不是某一时刻的真实星历。不要用画面测量距离、预测天象或比较真实公转速度。
 
-本轮已澄清水星“自转周期”与“太阳日”的区别：[NASA Mercury Facts](https://science.nasa.gov/mercury/facts/) 分别给出约 59 和 176 个地球日。其他知识卡尚未逐项科学复核。
+已澄清水星“自转周期”与“太阳日”的区别：[NASA Mercury Facts](https://science.nasa.gov/mercury/facts/) 分别给出约 59 和 176 个地球日。第二轮修正了天王星轴倾角说明、太阳与地球的直径比标签，以及海王星风速表述。
+
+2026-10-22 核对外行星的已知卫星数：木星 **115**、土星 **293**、天王星 **29**、海王星 **16**。知识卡显示核对日期，数量可能继续更新。来源为 [NASA/JPL 卫星发现表](https://ssd.jpl.nasa.gov/sats/discovery.html)、[木星事实页](https://science.nasa.gov/jupiter/jupiter-facts/)、[土星卫星页](https://science.nasa.gov/saturn/moons/)、[天王星卫星页](https://science.nasa.gov/uranus/moons/)和[海王星事实页](https://science.nasa.gov/neptune/neptune-facts/)。天王星的通用事实页仍显示旧的 28，本次采用卫星专页及 JPL 表中一致的 29。
+
+这些是明显问题的定点复核，尚未完成全部知识卡数值、定义和来源的逐项审校。
 
 知识卡用于入门介绍，数值经过取整；会变化的信息应在用于正式教学前复核。贴图也可能包含艺术化调色或补全，不等同于未经处理的航天照片。有关贴图来源见[第三方声明](THIRD_PARTY_NOTICES.md)。
 
@@ -110,7 +122,7 @@ THIRD_PARTY_NOTICES.md       第三方来源、许可与已验证哈希
 
 ### 验证与验收
 
-开发检查使用 Node.js 内置测试运行器，无需安装 npm 依赖。安装 Node.js 18 或更新版本后（本轮使用 Node.js 24.19.0），在项目根目录运行：
+开发检查使用 Node.js 内置测试运行器，无需安装 npm 依赖。安装 Node.js 18 或更新版本后，在项目根目录运行；本地发布复核使用 Node.js 23.11.0，CI配置为Node 24：
 
 ```sh
 node --test tests/*.test.mjs
@@ -118,7 +130,19 @@ node --test tests/*.test.mjs
 
 2026-10-21 的维护检查：**20 项测试通过**，覆盖源码语法和本地资源引用、摄像头生命周期及失败清理、迟到的视频流 / 模型取消、重复启动、后台关闭、连续推理失败、指针点击 / 拖动 / 双指 / 取消、滚轮缩放、暂停状态、画布键盘快捷键及导航按钮状态 / 节点稳定性、手势关闭摄像头的帧退出及后处理错误阈值。
 
-这些是使用 VM、模拟 DOM 和模拟 MediaPipe 的隔离测试，**不是浏览器集成测试，也没有证明真实手势识别效果**。本轮浏览器视觉检查未完成：预览浏览器无法连接执行环境的本地服务，执行环境内 Chromium 也未成功启动。真实摄像头、真实移动设备和跨浏览器验收尚未执行。
+以上 20 项使用 VM、模拟 DOM 和模拟 MediaPipe。第二轮另增加三组实际浏览器验收脚本，覆盖 WebGL渲染、鼠标/键盘/模拟触屏、布局、浏览器原生拒绝摄像头，以及合成视频流配合真实本地MediaPipe/WASM的清理流程。Pages路径与候选完整性检查会确认正式页面、预览和资产哈希一致；结果归属与边界见[验收记录](docs/ACCEPTANCE.md)。
+
+浏览器脚本需另装 Playwright CLI；它仅用于维护，不是运行网页的依赖。先在一个终端运行 `python3 -m http.server 8766 --bind 127.0.0.1`，另一个终端在项目根目录运行：
+
+```sh
+node tests/run-browser-acceptance.mjs
+```
+
+若 `playwright-cli` 不在 PATH，可用 `PLAYWRIGHT_CLI=/绝对路径/playwright-cli.js node tests/run-browser-acceptance.mjs`。脚本使用独立无头会话，退出码反映检查是否失败；JSON、日志和截图写入 `output/playwright/`。摄像头权限被明确拒绝，成功路径只使用 `canvas.captureStream()` 合成画面，绝不调用原生摄像头。背景与离页清理使用浏览器 DOM 事件模拟。
+
+可用 `SOLAR_BASE_URL=http://127.0.0.1:8766/gesture-solar-system/` 复测 Pages 子目录；这时静态服务的目录应是项目文件夹的父目录，使 URL 中的 `gesture-solar-system/` 指向本项目。CI 执行 Node 回归与子目录资源路径检查，不能替代实际浏览器及真实设备验收。
+
+**2026-11-01用户反馈：指定冻结候选的手机/Safari、真实摄像头手势及关闭/切后台停止均正常。** 这是用户验收反馈，不是助手独立硬件测试；具体设备与版本未记录，Firefox、读屏器、系统级减少动态效果和全部设备组合仍未独立验收。
 
 已完成的资源核对：本地 MediaPipe JavaScript 与四个 WASM 运行文件逐字节匹配官方 npm `0.10.14` 发布包；手部模型逐字节匹配 Google 官方 `float16/1` 模型。详细证据见[第三方声明](THIRD_PARTY_NOTICES.md)。
 
@@ -141,6 +165,6 @@ node --test tests/*.test.mjs
 
 ## 许可状态
 
-本仓库目前没有为项目自有代码指定根级 `LICENSE`；公开可见不代表全部代码已获得任意再分发授权。本次维护不会代替版权持有人选择项目许可证。
+项目自有代码、文档和测试按 [MIT LICENSE](LICENSE) 开源，署名 `wukong880626-cloud`（2026），版权持有人已明确批准此许可。
 
-第三方组件保留各自许可：Three.js 为 MIT，MediaPipe 与已核对的手部模型为 Apache 2.0，Solar System Scope 贴图为 CC BY 4.0。版本、适用范围、来源与核对限制见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。这些第三方许可证不能替代项目自有代码的许可决定。
+第三方组件保留各自许可：Three.js 为 MIT，MediaPipe 与已核对的手部模型为 Apache 2.0，Solar System Scope 贴图为 CC BY 4.0。版本、适用范围、署名、来源与核对限制见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。根目录 MIT 不替代第三方许可证，尤其不能将贴图署名与许可要求移除。

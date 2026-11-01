@@ -2,7 +2,7 @@
 
 核对日期：2026-10-21。本文件记录当前仓库中第三方代码、模型及贴图的来源，不为本项目自有代码授予许可证，也不代表上游作者认可或赞助本项目。
 
-**English:** Third-party components retain their own licenses. The application itself has no root project license at present. Version and provenance checks below identify the bundled files; they do not constitute a security audit or blanket license grant for the repository.
+**English:** First-party application code, documentation, and tests are licensed under the root MIT LICENSE, copyright (c) 2026 wukong880626-cloud. Third-party components, models, and textures retain their own licenses below. Version and provenance checks do not constitute a security audit or relicense third-party material.
 
 ## 1. Three.js
 
@@ -76,6 +76,6 @@
 
 ## 5. 项目自有代码与更新原则
 
-目前仓库没有根级项目 `LICENSE`。上述许可仅说明各第三方资源的适用范围，不替代版权持有人对 `index.html` 等项目自有内容的许可决定。
+按版权持有人批准的方案，`index.html` 等项目自有代码、文档与测试适用根目录 [MIT LICENSE](LICENSE)，署名 `wukong880626-cloud`（2026）。`vendor/` 中的第三方代码与模型、`textures/` 中的贴图继续遵循本声明列出的各自许可；根目录 MIT 不将这些第三方素材重新许可为 MIT。原资源核对日期和未逐张比对贴图的限制继续保留。
 
 依赖、模型或素材发生变更时，应同时更新版本、来源、校验值、改动说明及必要的许可文本。未经重新核对，不要把这里的版本和哈希沿用到替换后的文件上。

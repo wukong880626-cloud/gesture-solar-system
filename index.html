@@ -91,6 +91,8 @@
     margin-top: 10px; font-size: 13px; color: #ffe9a8; line-height: 1.6;
   }
   #info .back { font-size: 11px; color: rgba(160,180,255,0.7); margin-top: 8px; }
+  #info .fact-note { font-size: 10.5px; color: #aeb8ce; margin-top: 6px; }
+  #info .fact-note:empty { display: none; }
   #earth-view .ev-tip {
     padding: 6px 14px; font-size: 11.5px; color: rgba(255,255,255,0.4);
     border-top: 1px solid rgba(255,255,255,0.08);
@@ -148,16 +150,18 @@
   }
   @media (max-height: 560px) {
     #overlay { justify-content: flex-start; gap: 12px; }
+    #help { display: none !important; }
+    #cam-box { width: 120px; height: 90px; bottom: 76px; right: 10px; }
   }
 
   /* ---- 手机 / 平板适配 ---- */
-  @media (max-width: 760px) {
+  @media (max-width: 760px), (max-height: 560px) {
     #overlay h1 { font-size: 24px; }
     #overlay p { font-size: 13px; }
     #hud { top: 10px; font-size: 12px; padding: 7px 14px; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
     #help { display: none !important; }
     #cam-box { width: 120px; height: 90px; bottom: 76px; right: 10px; }
-    #info { min-width: 0; width: 94vw; padding: 10px 12px 10px; top: 52px; }
+    #info { min-width: 0; width: 94vw; max-width: 640px; padding: 10px 12px 10px; top: 52px; }
     #info h2 { font-size: 17px; }
     #info .stat { min-width: 60px; padding: 4px 8px; }
     #info .stat .v { font-size: 11.5px; }
@@ -173,7 +177,7 @@
 </style>
 </head>
 <body>
-<canvas id="scene" tabindex="-1" aria-label="太阳系三维视图" aria-describedby="keyboard-help">当前浏览器无法显示三维画布。请使用支持 WebGL 的浏览器。</canvas>
+<canvas id="scene" tabindex="-1" aria-label="太阳系三维视图" aria-describedby="keyboard-help">太阳系交互三维画布；也可使用天体导航按钮查看知识卡。</canvas>
 <p id="keyboard-help" class="sr-only">在三维视图上用方向键旋转，加号或减号缩放，空格暂停或继续，Esc 返回全景。按 Tab 可依次访问天体和控制按钮。</p>
 <p id="mode-status" class="sr-only" role="status"></p>
 <noscript><p style="position:fixed;inset:0;z-index:200;background:#101830;color:white;padding:24px">本互动课堂需要 JavaScript。请启用 JavaScript 后刷新页面。</p></noscript>
@@ -191,6 +195,7 @@
   <h2></h2>
   <div class="stats"></div>
   <div class="fun"></div>
+  <div class="fact-note"></div>
   <div class="back">指向空白处轻捏 / 点击空白处 / 按 Esc 返回全景</div>
 </div>
 
@@ -410,17 +415,25 @@ const PLANETS = [
     fun: '💡 火星上有太阳系最高的火山——奥林帕斯山，高约 21 公里，是珠穆朗玛峰的 2.4 倍！',
     glow: [0xcc6a44, 1.05, 3.4, 0.71, 0.45] },
   { name: '木星', r: 5.4, dist: 64, speed: 0.44, tex: '2k_jupiter.jpg', hi: '8k_jupiter.jpg', tilt: 3.1, spin: 2.0,
-    stats: [['142,984 km','直径'],['7.78亿 km','平均距太阳'],['11.9 年','公转一年'],['9.9 小时','自转周期'],['95 颗','卫星']],
-    fun: '💡 木星是行星之王，能装下 1,300 个地球！它的"大红斑"是一场刮了 300 多年的超级风暴。' },
+    // https://science.nasa.gov/jupiter/jupiter-facts/ (checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['142,984 km','直径'],['7.78亿 km','平均距太阳'],['11.9 年','公转一年'],['9.9 小时','自转周期'],['115 颗','已知卫星']],
+    fun: '💡 木星是行星之王，能装下约 1,300 个地球！它的"大红斑"是一场持续数百年的巨大风暴。' },
   { name: '土星', r: 4.6, dist: 84, speed: 0.33, tex: '2k_saturn.jpg', hi: '8k_saturn.jpg', tilt: 26.7, spin: 1.9,
-    stats: [['120,536 km','直径'],['14.3亿 km','平均距太阳'],['29.5 年','公转一年'],['10.7 小时','自转周期'],['146 颗','卫星']],
+    // https://science.nasa.gov/saturn/moons/ (August 2026 tally; checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['120,536 km','直径'],['14.3亿 km','平均距太阳'],['29.5 年','公转一年'],['10.7 小时','自转周期'],['293 颗','已知卫星']],
     fun: '💡 土星的光环由无数冰块和岩石组成，最薄的地方只有几十米！它密度比水小，放进大海里能浮起来。' },
   { name: '天王星', r: 3.1, dist: 101, speed: 0.23, tex: '2k_uranus.jpg', tilt: 97.8, spin: 1.2,
-    stats: [['51,118 km','直径'],['28.7亿 km','平均距太阳'],['84 年','公转一年'],['17.2 小时','自转周期'],['28 颗','卫星']],
-    fun: '💡 天王星是"躺着"自转的——它的自转轴几乎指向太阳，像一个在轨道上滚动的球。淡蓝色来自大气中的甲烷。' },
+    // https://science.nasa.gov/uranus/moons/ (August 2026 tally; checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['51,118 km','直径'],['28.7亿 km','平均距太阳'],['84 年','公转一年'],['17.2 小时','自转周期'],['29 颗','已知卫星']],
+    fun: '💡 天王星的自转轴相对轨道法线倾斜约 98°，像"躺着"旋转的球。蓝绿色来自大气中的甲烷。' },
   { name: '海王星', r: 3.0, dist: 116, speed: 0.18, tex: '2k_neptune.jpg', tilt: 28.3, spin: 1.3,
-    stats: [['49,528 km','直径'],['45亿 km','平均距太阳'],['165 年','公转一年'],['16.1 小时','自转周期'],['16 颗','卫星']],
-    fun: '💡 海王星上的风暴是太阳系最快的，风速超过 2,000 公里/小时——比客机飞行速度还快两倍！',
+    // https://science.nasa.gov/neptune/neptune-facts/ (checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['49,528 km','直径'],['45亿 km','平均距太阳'],['165 年','公转一年'],['16.1 小时','自转周期'],['16 颗','已知卫星']],
+    fun: '💡 海王星是太阳系风速最快的行星，风速可超过 2,000 公里/小时。',
     glow: [0x4466dd, 1.06, 3.2, 0.72, 0.6] },
 ];
 
@@ -525,11 +538,11 @@ for (const P of PLANETS) {
   }
 
   planets.push({ pivot, speed: P.speed, mesh, spin: P.spin });
-  clickable.push({ mesh, name: P.name, r: P.r, stats: P.stats, fun: P.fun, label, hiSpecs });
+  clickable.push({ mesh, name: P.name, r: P.r, stats: P.stats, fun: P.fun, satelliteAsOf: P.satelliteAsOf, label, hiSpecs });
 }
 
 clickable.push({ mesh: sun, name: '太阳', r: SUN_R,
-  stats: [['139万 km','直径'],['地球的 109 倍','大小'],['5,500°C','表面温度'],['46亿 岁','年龄']],
+  stats: [['139万 km','直径'],['地球的 109 倍','直径比'],['5,500°C','表面温度'],['46亿 岁','年龄']],
   fun: '💡 太阳占了整个太阳系质量的 99.86%！它每秒钟把 400 万吨物质变成光和热，已经烧了 46 亿年。', label: null,
   hiSpecs: [{ mat: sun.material, key: 'map', file: '8k_sun.jpg' }] });
 
@@ -599,6 +612,7 @@ function focusOn(p, fromTour = false) {
     infoBox.querySelector('.stats').innerHTML = (p.stats || [])
       .map(([v, k]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
     infoBox.querySelector('.fun').textContent = p.fun || '';
+    infoBox.querySelector('.fact-note').textContent = p.satelliteAsOf ? `卫星数核对：${p.satelliteAsOf}；数量可能更新，来源见 README。` : '';
     infoBox.classList.add('show');
     for (const c of clickable) if (c.label) c.label.visible = false;
   } else {
