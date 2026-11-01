@@ -4,10 +4,17 @@
 <meta charset="UTF-8">
 <title>手势太阳系 · 互动课堂</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="无需安装的太阳系互动课堂：手势、鼠标、触屏与键盘探索太阳和八大行星。摄像头可选，手部追踪在本机运行。">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, "PingFang SC", sans-serif; }
   #scene { position: fixed; inset: 0; touch-action: none; }
+  button { font: inherit; background: transparent; border: 0; }
+  button:focus-visible, a:focus-visible, #scene:focus-visible { outline: 3px solid #ffd866; outline-offset: 3px; }
+  #scene:focus-visible { outline-offset: -4px; }
+  button:disabled { opacity: .55; cursor: wait; }
+  a { color: #aecbff; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
   /* ---- 摄像头小窗 ---- */
   #cam-box {
@@ -84,6 +91,8 @@
     margin-top: 10px; font-size: 13px; color: #ffe9a8; line-height: 1.6;
   }
   #info .back { font-size: 11px; color: rgba(160,180,255,0.7); margin-top: 8px; }
+  #info .fact-note { font-size: 10.5px; color: #aeb8ce; margin-top: 6px; }
+  #info .fact-note:empty { display: none; }
   #earth-view .ev-tip {
     padding: 6px 14px; font-size: 11.5px; color: rgba(255,255,255,0.4);
     border-top: 1px solid rgba(255,255,255,0.08);
@@ -95,8 +104,9 @@
     z-index: 10; display: none; align-items: center; gap: 6px;
     background: rgba(14,18,34,0.72); backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.14); border-radius: 999px;
-    padding: 7px 10px; white-space: nowrap;
+    padding: 7px 10px; white-space: nowrap; max-width: 96vw; overflow-x: auto;
   }
+  #bar > * { flex-shrink: 0; }
   #bar .chip {
     padding: 7px 13px; border-radius: 999px; font-size: 13.5px; cursor: pointer;
     color: rgba(255,255,255,0.75); transition: all .15s; border: 1px solid transparent;
@@ -116,7 +126,7 @@
     position: fixed; inset: 0; z-index: 100; display: flex;
     flex-direction: column; align-items: center; justify-content: center; gap: 18px;
     background: radial-gradient(ellipse at center, #101830 0%, #04060c 70%);
-    color: #fff; text-align: center; padding: 24px;
+    color: #fff; text-align: center; padding: 24px; overflow-y: auto;
   }
   #overlay h1 { font-size: 32px; font-weight: 700; letter-spacing: 5px; }
   #overlay p { color: rgba(255,255,255,0.6); font-size: 15px; line-height: 1.9; }
@@ -127,7 +137,7 @@
   }
   #overlay button:hover { transform: scale(1.05); }
   #overlay .err { color: #ff8a8a; font-size: 14px; max-width: 460px; }
-  #overlay .small { font-size: 12px; color: rgba(255,255,255,0.35); }
+  #overlay .small { font-size: 12px; color: #aeb8ce; max-width: 650px; line-height: 1.7; }
   #load-bar { width: 260px; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
   #load-bar i { display: block; height: 100%; width: 0%; border-radius: 4px;
     background: linear-gradient(90deg, #4f7cff, #9b5cff); transition: width .25s; }
@@ -135,15 +145,23 @@
     background: transparent; box-shadow: none; border: 1px solid rgba(255,255,255,0.3);
     font-size: 14px; padding: 10px 28px;
   }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+  }
+  @media (max-height: 560px) {
+    #overlay { justify-content: flex-start; gap: 12px; }
+    #help { display: none !important; }
+    #cam-box { width: 120px; height: 90px; bottom: 76px; right: 10px; }
+  }
 
   /* ---- 手机 / 平板适配 ---- */
-  @media (max-width: 760px) {
+  @media (max-width: 760px), (max-height: 560px) {
     #overlay h1 { font-size: 24px; }
     #overlay p { font-size: 13px; }
     #hud { top: 10px; font-size: 12px; padding: 7px 14px; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
     #help { display: none !important; }
     #cam-box { width: 120px; height: 90px; bottom: 76px; right: 10px; }
-    #info { min-width: 0; width: 94vw; padding: 10px 12px 10px; top: 52px; }
+    #info { min-width: 0; width: 94vw; max-width: 640px; padding: 10px 12px 10px; top: 52px; }
     #info h2 { font-size: 17px; }
     #info .stat { min-width: 60px; padding: 4px 8px; }
     #info .stat .v { font-size: 11.5px; }
@@ -159,7 +177,10 @@
 </style>
 </head>
 <body>
-<canvas id="scene"></canvas>
+<canvas id="scene" tabindex="-1" aria-label="太阳系三维视图" aria-describedby="keyboard-help">太阳系交互三维画布；也可使用天体导航按钮查看知识卡。</canvas>
+<p id="keyboard-help" class="sr-only">在三维视图上用方向键旋转，加号或减号缩放，空格暂停或继续，Esc 返回全景。按 Tab 可依次访问天体和控制按钮。</p>
+<p id="mode-status" class="sr-only" role="status"></p>
+<noscript><p style="position:fixed;inset:0;z-index:200;background:#101830;color:white;padding:24px">本互动课堂需要 JavaScript。请启用 JavaScript 后刷新页面。</p></noscript>
 
 <div id="cursor"><div class="dot"></div><div class="tip"></div></div>
 
@@ -170,10 +191,11 @@
 
 <div id="hud" style="display:none">⏳ 正在加载手势模型…</div>
 
-<div id="info">
+<div id="info" role="region" aria-label="天体知识卡" aria-live="polite" aria-atomic="true" aria-hidden="true">
   <h2></h2>
   <div class="stats"></div>
   <div class="fun"></div>
+  <div class="fact-note"></div>
   <div class="back">指向空白处轻捏 / 点击空白处 / 按 Esc 返回全景</div>
 </div>
 
@@ -182,19 +204,20 @@
   <b>🤏 捏住并移动</b> → 旋转视角<br>
   <b>🤏🤏 双手捏合</b> 拉开 / 靠近 → 缩放<br>
   <b>🖱️ 鼠标</b> 点击 · 拖动 · 滚轮 同样可用
+  <br><b>⌨️ 键盘</b> Tab 选按钮 · 视图内方向键旋转 · +/− 缩放 · 空格暂停
 </div>
 
-<div id="bar"></div>
+<nav id="bar" aria-label="天体和播放控制"></nav>
 
 <div id="overlay">
   <h1>🪐 手势太阳系</h1>
-  <p>挥挥手就能遨游太阳系：食指指向并轻捏选中行星，捏住拖动旋转，双手缩放。<br>点击开始后请允许浏览器使用摄像头。</p>
+  <p>挥挥手就能遨游太阳系：食指指向并轻捏选中行星，捏住拖动旋转，双手缩放。<br>也可不打开摄像头，用鼠标、触屏或键盘探索。</p>
   <div id="load-bar"><i></i></div>
-  <div class="small" id="load-text">正在加载行星贴图…</div>
+  <div class="small" id="load-text" role="status">正在加载行星贴图…</div>
   <button id="start-btn">📷 手势模式（开启摄像头）</button>
-  <button id="browse-btn" class="ghost">🖐️ 触屏 / 鼠标模式（不用摄像头）</button>
-  <div class="err" id="err-msg" style="display:none"></div>
-  <div class="small">手部追踪在本机浏览器内运行，画面不会上传 · 行星贴图 © Solar System Scope (CC-BY 4.0)</div>
+  <button id="browse-btn" class="ghost">🖐️ 无摄像头模式（鼠标 / 触屏 / 键盘）</button>
+  <div class="err" id="err-msg" role="alert" style="display:none"></div>
+  <div class="small">摄像头仅在手势模式下开启，可随时关闭；手部追踪在本机浏览器内运行，本应用不上传画面。<br>演示尺寸、距离与速度不按真实比例。行星贴图：<a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noopener noreferrer">Solar System Scope</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></div>
 </div>
 
 <script type="importmap">
@@ -215,8 +238,19 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ================= 渲染器 / 后处理 ================= */
 const IS_MOBILE = matchMedia('(max-width: 760px)').matches;
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = (() => {
+  try { return new THREE.WebGLRenderer({ canvas, antialias: true }); }
+  catch (error) {
+    const message = document.getElementById('err-msg');
+    message.style.display = 'block';
+    message.textContent = '无法创建三维视图。请检查浏览器的 WebGL / 硬件加速设置，或换用支持 WebGL 的浏览器。';
+    document.querySelectorAll('#overlay button').forEach(button => button.disabled = true);
+    document.getElementById('load-text').textContent = '三维渲染不可用';
+    throw error;
+  }
+})();
 renderer.setPixelRatio(Math.min(devicePixelRatio, IS_MOBILE ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -243,11 +277,16 @@ addEventListener('resize', resize); resize();
 const manager = new THREE.LoadingManager();
 const loadBarFill = document.querySelector('#load-bar i');
 const loadText = document.getElementById('load-text');
+const failedAssets = new Set();
+manager.onError = url => failedAssets.add(url);
 manager.onProgress = (url, done, total) => {
   loadBarFill.style.width = (done / total * 100) + '%';
   loadText.textContent = `正在加载行星贴图… ${done}/${total}`;
 };
-manager.onLoad = () => { loadText.textContent = '✓ 素材就绪'; loadBarFill.style.width = '100%'; };
+manager.onLoad = () => {
+  loadText.textContent = failedAssets.size ? `部分贴图加载失败（${failedAssets.size} 个），可继续浏览或刷新重试。` : '✓ 素材就绪';
+  loadBarFill.style.width = '100%';
+};
 const texLoader = new THREE.TextureLoader(manager);
 function tex(name, srgb = true) {
   const t = texLoader.load('textures/' + name);
@@ -264,7 +303,7 @@ const cam = {
   target: new THREE.Vector3(),
 };
 let focused = null;
-let autoRotate = true;
+let autoRotate = !REDUCED_MOTION;
 
 function clampPhi(p) { return Math.min(Math.PI - 0.12, Math.max(0.12, p)); }
 function radiusRange() { return focused ? [Math.max(focused.r * 2.0, 2.5), 480] : [26, 480]; }
@@ -356,36 +395,45 @@ scene.add(sun);
 scene.add(makeGlow(SUN_R, 0xff9933, 1.3, 3.2, 0.71, 0.5));   // 外层日冕
 scene.add(makeGlow(SUN_R, 0xffcc66, 1.09, 3.6, 0.78, 0.75)); // 内层色球
 
-/* ================= 行星数据（真实数据，教学用） ================= */
+/* ================= 行星知识卡（近似值，教学用；见 README 的科学表达边界） ================= */
 // r=显示半径 dist=显示轨道 speed=相对公转速 tex 贴图 tilt 轴倾角° spin 自转速
 const PLANETS = [
   { name: '水星', r: 1.3, dist: 17, speed: 1.60, tex: '2k_mercury.jpg', hi: '8k_mercury.jpg', tilt: 0.03, spin: 0.10,
-    stats: [['4,879 km','直径'],['5,790万 km','距太阳'],['88 天','公转一年'],['59 天','自转一天'],['0 颗','卫星']],
-    fun: '💡 水星上的一天比一年还长！而且它是太阳系里温差最大的星球：白天 430°C，夜里 -180°C。' },
+    stats: [['4,879 km','直径'],['5,790万 km','平均距太阳'],['88 天','公转一年'],['59 天','自转周期'],['0 颗','卫星']],
+    // Source: https://science.nasa.gov/mercury/facts/ (checked 2026-10-21).
+    fun: '💡 水星自转一圈约 59 个地球日；一次完整昼夜（太阳日）约 176 个地球日，比它约 88 天的一年还长。' },
   { name: '金星', r: 2.1, dist: 25, speed: 1.17, tex: '2k_venus_atmosphere.jpg', hi: '4k_venus_atmosphere.jpg', tilt: 177.4, spin: 0.05,
-    stats: [['12,104 km','直径'],['1.08亿 km','距太阳'],['225 天','公转一年'],['243 天','自转一天'],['0 颗','卫星']],
+    stats: [['12,104 km','直径'],['1.08亿 km','平均距太阳'],['225 天','公转一年'],['243 天','自转周期'],['0 颗','卫星']],
     fun: '💡 金星是太阳系最热的行星（465°C），还是"倒着转"的——在金星上，太阳从西边升起！',
     glow: [0xddb070, 1.07, 3.0, 0.72, 0.8] },
   { name: '地球', r: 2.3, dist: 34, speed: 1.00, tex: '2k_earth_daymap.jpg', hi: '8k_earth_daymap.jpg', tilt: 23.4, spin: 0.9,
-    stats: [['12,756 km','直径'],['1.5亿 km','距太阳'],['365 天','公转一年'],['24 小时','自转一天'],['1 颗','卫星']],
+    stats: [['12,756 km','直径'],['1.5亿 km','平均距太阳'],['365 天','公转一年'],['24 小时','自转周期'],['1 颗','卫星']],
     fun: '💡 地球是目前已知唯一有生命的星球，表面 71% 被海洋覆盖，从太空看是一颗蓝色的"水球"。',
     glow: [0x4f7fff, 1.07, 3.2, 0.72, 0.9] },
   { name: '火星', r: 1.7, dist: 43, speed: 0.81, tex: '2k_mars.jpg', hi: '8k_mars.jpg', tilt: 25.2, spin: 0.85,
-    stats: [['6,792 km','直径'],['2.28亿 km','距太阳'],['687 天','公转一年'],['24.6 小时','自转一天'],['2 颗','卫星']],
+    stats: [['6,792 km','直径'],['2.28亿 km','平均距太阳'],['687 天','公转一年'],['24.6 小时','自转周期'],['2 颗','卫星']],
     fun: '💡 火星上有太阳系最高的火山——奥林帕斯山，高约 21 公里，是珠穆朗玛峰的 2.4 倍！',
     glow: [0xcc6a44, 1.05, 3.4, 0.71, 0.45] },
   { name: '木星', r: 5.4, dist: 64, speed: 0.44, tex: '2k_jupiter.jpg', hi: '8k_jupiter.jpg', tilt: 3.1, spin: 2.0,
-    stats: [['142,984 km','直径'],['7.78亿 km','距太阳'],['11.9 年','公转一年'],['9.9 小时','自转一天'],['95 颗','卫星']],
-    fun: '💡 木星是行星之王，能装下 1,300 个地球！它的"大红斑"是一场刮了 300 多年的超级风暴。' },
+    // https://science.nasa.gov/jupiter/jupiter-facts/ (checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['142,984 km','直径'],['7.78亿 km','平均距太阳'],['11.9 年','公转一年'],['9.9 小时','自转周期'],['115 颗','已知卫星']],
+    fun: '💡 木星是行星之王，能装下约 1,300 个地球！它的"大红斑"是一场持续数百年的巨大风暴。' },
   { name: '土星', r: 4.6, dist: 84, speed: 0.33, tex: '2k_saturn.jpg', hi: '8k_saturn.jpg', tilt: 26.7, spin: 1.9,
-    stats: [['120,536 km','直径'],['14.3亿 km','距太阳'],['29.5 年','公转一年'],['10.7 小时','自转一天'],['146 颗','卫星']],
+    // https://science.nasa.gov/saturn/moons/ (August 2026 tally; checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['120,536 km','直径'],['14.3亿 km','平均距太阳'],['29.5 年','公转一年'],['10.7 小时','自转周期'],['293 颗','已知卫星']],
     fun: '💡 土星的光环由无数冰块和岩石组成，最薄的地方只有几十米！它密度比水小，放进大海里能浮起来。' },
   { name: '天王星', r: 3.1, dist: 101, speed: 0.23, tex: '2k_uranus.jpg', tilt: 97.8, spin: 1.2,
-    stats: [['51,118 km','直径'],['28.7亿 km','距太阳'],['84 年','公转一年'],['17.2 小时','自转一天'],['28 颗','卫星']],
-    fun: '💡 天王星是"躺着"自转的——它的自转轴几乎指向太阳，像一个在轨道上滚动的球。淡蓝色来自大气中的甲烷。' },
+    // https://science.nasa.gov/uranus/moons/ (August 2026 tally; checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['51,118 km','直径'],['28.7亿 km','平均距太阳'],['84 年','公转一年'],['17.2 小时','自转周期'],['29 颗','已知卫星']],
+    fun: '💡 天王星的自转轴相对轨道法线倾斜约 98°，像"躺着"旋转的球。蓝绿色来自大气中的甲烷。' },
   { name: '海王星', r: 3.0, dist: 116, speed: 0.18, tex: '2k_neptune.jpg', tilt: 28.3, spin: 1.3,
-    stats: [['49,528 km','直径'],['45亿 km','距太阳'],['165 年','公转一年'],['16.1 小时','自转一天'],['16 颗','卫星']],
-    fun: '💡 海王星上的风暴是太阳系最快的，风速超过 2,000 公里/小时——比客机飞行速度还快两倍！',
+    // https://science.nasa.gov/neptune/neptune-facts/ (checked 2026-10-22).
+    satelliteAsOf: '2026-10-22',
+    stats: [['49,528 km','直径'],['45亿 km','平均距太阳'],['165 年','公转一年'],['16.1 小时','自转周期'],['16 颗','已知卫星']],
+    fun: '💡 海王星是太阳系风速最快的行星，风速可超过 2,000 公里/小时。',
     glow: [0x4466dd, 1.06, 3.2, 0.72, 0.6] },
 ];
 
@@ -490,11 +538,11 @@ for (const P of PLANETS) {
   }
 
   planets.push({ pivot, speed: P.speed, mesh, spin: P.spin });
-  clickable.push({ mesh, name: P.name, r: P.r, stats: P.stats, fun: P.fun, label, hiSpecs });
+  clickable.push({ mesh, name: P.name, r: P.r, stats: P.stats, fun: P.fun, satelliteAsOf: P.satelliteAsOf, label, hiSpecs });
 }
 
 clickable.push({ mesh: sun, name: '太阳', r: SUN_R,
-  stats: [['139万 km','直径'],['地球的 109 倍','大小'],['5,500°C','表面温度'],['46亿 岁','年龄']],
+  stats: [['139万 km','直径'],['地球的 109 倍','直径比'],['5,500°C','表面温度'],['46亿 岁','年龄']],
   fun: '💡 太阳占了整个太阳系质量的 99.86%！它每秒钟把 400 万吨物质变成光和热，已经烧了 46 亿年。', label: null,
   hiSpecs: [{ mat: sun.material, key: 'map', file: '8k_sun.jpg' }] });
 
@@ -549,12 +597,13 @@ function applyHiRes(p) {
 }
 
 /* ================= 时间控制 / 聚焦 / 巡游 ================= */
-const TIME = { scale: 1 };
+const TIME = { scale: REDUCED_MOTION ? 0 : 1 };
 const infoBox = document.getElementById('info');
 const bar = document.getElementById('bar');
 
 function focusOn(p, fromTour = false) {
   focused = p;
+  infoBox.setAttribute('aria-hidden', String(!p));
   if (!fromTour) stopTour();
   applyHiRes(p);
   if (p) {
@@ -563,6 +612,7 @@ function focusOn(p, fromTour = false) {
     infoBox.querySelector('.stats').innerHTML = (p.stats || [])
       .map(([v, k]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
     infoBox.querySelector('.fun').textContent = p.fun || '';
+    infoBox.querySelector('.fact-note').textContent = p.satelliteAsOf ? `卫星数核对：${p.satelliteAsOf}；数量可能更新，来源见 README。` : '';
     infoBox.classList.add('show');
     for (const c of clickable) if (c.label) c.label.visible = false;
   } else {
@@ -594,19 +644,43 @@ function stopTour() {
 
 /* ---- 底部导航栏 ---- */
 function updateBar() {
-  const chips = tourOrder.map(n =>
-    `<div class="chip ${focused?.name === n ? 'cur' : ''}" data-go="${n}">${n}</div>`).join('');
-  const speeds = [[0, '⏸'], [1, '1×'], [5, '5×'], [20, '20×']].map(([v, t]) =>
-    `<div class="ctl ${TIME.scale === v ? 'on' : ''}" data-speed="${v}">${t}</div>`).join('');
-  bar.innerHTML = chips +
-    `<div class="sep"></div>${speeds}<div class="sep"></div>` +
-    `<div class="ctl ${tourTimer ? 'on' : ''}" data-tour>🎬 巡游</div>`;
+  // Keep the same elements so updating state never discards keyboard focus.
+  if (!bar.children.length) {
+    const chips = tourOrder.map(n => `<button type="button" class="chip" data-go="${n}">${n}</button>`).join('');
+    const speeds = [[0, '⏸ 暂停'], [1, '1×'], [5, '5×'], [20, '20×']].map(([v, t]) =>
+      `<button type="button" class="ctl" data-speed="${v}" aria-label="${v ? `播放速度 ${v} 倍` : '暂停动画'}">${t}</button>`).join('');
+    bar.innerHTML = `<button type="button" class="chip" data-overview>全景</button>` + chips +
+      `<span class="sep" aria-hidden="true"></span>${speeds}<span class="sep" aria-hidden="true"></span>` +
+      `<button type="button" class="ctl" data-tour>🎬 巡游</button>` +
+      `<button type="button" class="ctl" data-camera></button>`;
+  }
+  for (const button of bar.querySelectorAll('button')) {
+    let active = false;
+    if (button.hasAttribute('data-go')) active = focused?.name === button.dataset.go;
+    else if (button.hasAttribute('data-overview')) active = !focused;
+    else if (button.hasAttribute('data-speed')) active = TIME.scale === Number(button.dataset.speed);
+    else if (button.hasAttribute('data-tour')) active = !!tourTimer;
+    else if (button.hasAttribute('data-camera')) {
+      active = cameraState !== 'off';
+      button.textContent = cameraState === 'starting' ? '取消开启摄像头' : active ? '关闭摄像头' : '📷 开启手势';
+    }
+    button.setAttribute('aria-pressed', String(active));
+    button.classList.toggle(button.classList.contains('chip') ? 'cur' : 'on', active);
+  }
+}
+function setSpeed(scale) {
+  TIME.scale = scale;
+  if (!scale) { autoRotate = false; cam.vTheta = cam.vPhi = 0; stopTour(); }
+  updateBar();
 }
 bar.addEventListener('click', e => {
-  const t = e.target;
+  const t = e.target.closest('button');
+  if (!t) return;
   if (t.dataset.go) focusOn(clickable.find(c => c.name === t.dataset.go));
-  else if (t.dataset.speed !== undefined) { TIME.scale = +t.dataset.speed; updateBar(); }
+  else if (t.dataset.overview !== undefined) focusOn(null);
+  else if (t.dataset.speed !== undefined) setSpeed(+t.dataset.speed);
   else if (t.dataset.tour !== undefined) { tourTimer ? (stopTour(), updateBar()) : startTour(); }
+  else if (t.dataset.camera !== undefined) cameraState === 'off' ? startGestures() : enterBrowseMode();
 });
 
 window.__dbg = { cam, clickable, focusOn, TIME, get focused() { return focused; } };
@@ -629,13 +703,22 @@ function pickAt(px, py) {
   return best;
 }
 
-let downPos = null, wasPinch = false;
-canvas.addEventListener('pointerdown', e => downPos = [e.clientX, e.clientY]);
-canvas.addEventListener('pointerup', e => {
-  if (wasPinch || !downPos || Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]) > 8) return;
-  focusOn(pickAt(e.clientX, e.clientY));
-});
+let downPos = null, wasPinch = false, pointerMoved = false;
 addEventListener('keydown', e => { if (e.key === 'Escape') focusOn(null); });
+canvas.addEventListener('keydown', e => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const actions = {
+    ArrowLeft: () => cam.tTheta += 0.12, ArrowRight: () => cam.tTheta -= 0.12,
+    ArrowUp: () => cam.tPhi = clampPhi(cam.tPhi - 0.12), ArrowDown: () => cam.tPhi = clampPhi(cam.tPhi + 0.12),
+    '+': () => cam.tRadius *= 0.9, '=': () => cam.tRadius *= 0.9, '-': () => cam.tRadius *= 1.1,
+    ' ': () => setSpeed(TIME.scale ? 0 : 1),
+  };
+  if (!actions[e.key]) return;
+  e.preventDefault();
+  autoRotate = false;
+  cam.vTheta = cam.vPhi = 0;
+  actions[e.key]();
+});
 
 /* ================= 手势控制 ================= */
 const hud = document.getElementById('hud');
@@ -649,6 +732,10 @@ const cursorTip = cursorEl.querySelector('.tip');
 
 let landmarker = null;
 let gestureMode = 'idle';
+let cameraState = 'off';
+let cameraAttempt = 0;
+let detectFrame = null;
+let detectionErrors = 0;
 
 const PINCH_ON = 0.32, PINCH_OFF = 0.46;
 const CONFIRM_FRAMES = 3;
@@ -699,7 +786,7 @@ let zoomSm = null, zoomRef = null;
 let cursorPx = null;   // 手势指针屏幕坐标
 
 function setHUD(text, active) {
-  hud.textContent = text;
+  if (hud.textContent !== text) hud.textContent = text;
   hud.classList.toggle('active', !!active);
 }
 
@@ -751,6 +838,10 @@ function processHands(result, now) {
   lastDetectT = now;
 
   const hands = result.landmarks || [];
+  // A lost hand must not keep a pinch latched when it re-enters the frame.
+  for (const key of Object.keys(handState)) {
+    if (Number(key.slice(1)) >= hands.length) delete handState[key];
+  }
   const states = hands.map((lm, i) => getHand('h' + i));
   const events = hands.map((lm, i) => updatePinch(states[i], lm, now));
   const pinchFlags = states.map(s => s.pinching);
@@ -761,7 +852,11 @@ function processHands(result, now) {
   if (events[0]?.tapped && cursorPx) {
     const el = document.elementFromPoint(cursorPx[0], cursorPx[1]);
     const ui = el && el.closest('.chip, .ctl');
-    if (ui) ui.click();
+    if (ui) {
+      ui.click();
+      // A gesture can press “close camera”; do not overwrite its status afterward.
+      if (cameraState !== 'on') return;
+    }
     else focusOn(pickAt(cursorPx[0], cursorPx[1]));
   }
 
@@ -807,20 +902,33 @@ function processHands(result, now) {
   }
 }
 
-async function startCamera() {
+async function startCamera(attempt) {
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    throw new DOMException('摄像头需要 HTTPS 或 localhost。', 'SecurityError');
+  }
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: 640, height: 480, facingMode: 'user', frameRate: { ideal: 60 } }
+    audio: false,
+    video: { width: 640, height: 480, facingMode: 'user', frameRate: { ideal: 30 } }
   });
+  if (attempt !== cameraAttempt) {
+    stream.getTracks().forEach(track => track.stop());
+    return;
+  }
   video.srcObject = stream;
-  await new Promise(res => video.onloadedmetadata = res);
+  for (const track of stream.getVideoTracks()) track.addEventListener('ended', () => {
+    if (video.srcObject === stream) enterBrowseMode('摄像头已断开，仍可使用鼠标、触屏或键盘。');
+  }, { once: true });
+  await video.play();
+  if (attempt !== cameraAttempt) return;
   camOverlay.width = video.videoWidth;
   camOverlay.height = video.videoHeight;
 }
 
-async function loadLandmarker() {
+async function loadLandmarker(attempt) {
   const vision = await import('./vendor/mediapipe/vision_bundle.mjs');
   const fileset = await vision.FilesetResolver.forVisionTasks('vendor/mediapipe/wasm');
-  landmarker = await vision.HandLandmarker.createFromOptions(fileset, {
+  if (attempt !== cameraAttempt) return;
+  const model = await vision.HandLandmarker.createFromOptions(fileset, {
     baseOptions: {
       modelAssetPath: 'vendor/mediapipe/hand_landmarker.task',
       delegate: 'GPU'
@@ -830,10 +938,13 @@ async function loadLandmarker() {
     minHandDetectionConfidence: 0.6,
     minTrackingConfidence: 0.6,
   });
+  if (attempt !== cameraAttempt) { model.close(); return; }
+  landmarker = model;
 }
 
 let lastVideoTime = -1;
 function detectLoop() {
+  if (cameraState !== 'on') return;
   if (landmarker && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
     try {
@@ -841,43 +952,112 @@ function detectLoop() {
       const result = landmarker.detectForVideo(video, now);
       for (const lm of result.landmarks || []) for (const p of lm) p.x = 1 - p.x;
       processHands(result, now);
-    } catch (e) { /* 忽略单帧错误 */ }
+      detectionErrors = 0;
+    } catch (e) {
+      if (++detectionErrors >= 15) {
+        enterBrowseMode('手势识别连续失败，已关闭摄像头；可继续用鼠标、触屏或键盘。');
+        return;
+      }
+    }
   }
-  requestAnimationFrame(detectLoop);
+  if (cameraState === 'on') detectFrame = requestAnimationFrame(detectLoop);
 }
 
-document.getElementById('browse-btn').addEventListener('click', () => {
+function stopGestures() {
+  ++cameraAttempt; // Invalidates pending permission/model requests as well as active sessions.
+  cameraState = 'off';
+  if (detectFrame !== null) cancelAnimationFrame(detectFrame);
+  detectFrame = null;
+  video.srcObject?.getTracks().forEach(track => track.stop());
+  video.pause();
+  video.srcObject = null;
+  if (landmarker) { landmarker.close(); landmarker = null; }
+  lastVideoTime = -1;
+  detectionErrors = 0;
+  gestureMode = 'idle';
+  lastRotPos = rotVelSample = zoomSm = zoomRef = cursorPx = null;
+  cam.vTheta = cam.vPhi = 0;
+  for (const key of Object.keys(handState)) delete handState[key];
+  cursorEl.style.display = 'none';
+  document.getElementById('cam-box').style.display = 'none';
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('start-btn').textContent = '📷 手势模式（开启摄像头）';
+  updateBar();
+}
+
+function enterBrowseMode(message = '👆 拖动旋转 · 双指/滚轮缩放 · Tab 访问控制 · 摄像头已关闭') {
+  stopGestures();
   overlay.style.display = 'none';
+  canvas.tabIndex = 0;
   hud.style.display = 'block';
   bar.style.display = 'flex';
-  updateBar();
-  setHUD('👆 拖动旋转 · 双指/滚轮缩放 · 点击行星查看');
+  document.getElementById('help').style.display = 'block';
+  setHUD(message);
+  document.getElementById('mode-status').textContent = message;
+}
+document.getElementById('browse-btn').addEventListener('click', () => {
+  enterBrowseMode();
+  canvas.focus();
 });
 
-document.getElementById('start-btn').addEventListener('click', async () => {
+async function startGestures() {
+  if (cameraState !== 'off') return;
+  const attempt = ++cameraAttempt;
+  cameraState = 'starting';
+  const startButton = document.getElementById('start-btn');
+  startButton.disabled = true;
+  startButton.textContent = '正在开启…可选择无摄像头模式取消';
   errMsg.style.display = 'none';
+  updateBar();
+  setHUD('⏳ 正在开启摄像头与本地手势模型…');
   try {
+    // Keep the initial overlay visible so there is always a camera-free exit.
+    await startCamera(attempt);
+    if (attempt !== cameraAttempt) return;
+    await loadLandmarker(attempt);
+    if (attempt !== cameraAttempt) return;
+    cameraState = 'on';
     overlay.style.display = 'none';
+    canvas.tabIndex = 0;
     document.getElementById('cam-box').style.display = 'block';
     hud.style.display = 'block';
     document.getElementById('help').style.display = 'block';
     bar.style.display = 'flex';
     updateBar();
-    setHUD('⏳ 正在加载手势模型…');
-    await startCamera();
-    await loadLandmarker();
     setHUD('👀 把手举到摄像头前');
+    document.getElementById('mode-status').textContent = '手势模式已开启，可用底部关闭摄像头按钮停止。';
+    canvas.focus();
     detectLoop();
   } catch (e) {
+    if (attempt !== cameraAttempt) return;
+    stopGestures();
     overlay.style.display = 'flex';
-    document.getElementById('cam-box').style.display = 'none';
+    canvas.tabIndex = -1;
     hud.style.display = 'none';
-    document.getElementById('help').style.display = 'none';
     bar.style.display = 'none';
+    document.getElementById('help').style.display = 'none';
+    const messages = {
+      NotAllowedError: '摄像头权限未获允许。可在浏览器的网站权限和系统摄像头权限中检查，或选择无摄像头模式。',
+      NotFoundError: '未找到摄像头。请连接摄像头，或选择无摄像头模式。',
+      NotReadableError: '摄像头暂时不可用，可能被其他应用占用。关闭占用摄像头的应用后重试，或选择无摄像头模式。',
+      SecurityError: '摄像头需要 HTTPS 或 localhost。请按 README 启动本地服务，或选择无摄像头模式。',
+    };
+    const message = messages[e.name] || '手势启动失败，摄像头已关闭。请检查本地 vendor 文件是否完整及浏览器的 WebGL 支持，或选择无摄像头模式。';
     errMsg.style.display = 'block';
-    errMsg.textContent = e.name === 'NotAllowedError'
-      ? '摄像头权限被拒绝。请在 系统设置 → 隐私与安全性 → 摄像头 中允许浏览器访问，然后重试。'
-      : '启动失败：' + e.message + '（手势模型需要联网加载，请检查网络）';
+    errMsg.textContent = message;
+    setHUD(message);
+    document.getElementById('mode-status').textContent = message;
+    startButton.focus();
+    console.warn('Gesture mode unavailable:', e);
+  }
+}
+document.getElementById('start-btn').addEventListener('click', startGestures);
+addEventListener('pagehide', () => { stopGestures(); stopTour(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopTour();
+    if (cameraState !== 'off') enterBrowseMode('页面已切至后台，摄像头已关闭。需要时可重新开启手势。');
+    updateBar();
   }
 });
 
@@ -885,20 +1065,27 @@ document.getElementById('start-btn').addEventListener('click', async () => {
 const activePointers = new Map();
 let pinchStart = null;   // { dist, radius }
 canvas.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
   canvas.setPointerCapture(e.pointerId);
+  canvas.focus({ preventScroll: true });
   activePointers.set(e.pointerId, [e.clientX, e.clientY]);
-  if (activePointers.size === 1) wasPinch = false;
+  if (activePointers.size === 1) {
+    wasPinch = pointerMoved = false;
+    downPos = [e.clientX, e.clientY];
+  }
   if (activePointers.size === 2) {
     wasPinch = true;   // 防止双指松开时误触发点选
     const [a, b] = [...activePointers.values()];
     pinchStart = { dist: Math.hypot(a[0] - b[0], a[1] - b[1]), radius: cam.tRadius };
   }
   autoRotate = false;
+  cam.vTheta = cam.vPhi = 0;
 });
 canvas.addEventListener('pointermove', e => {
   if (!activePointers.has(e.pointerId)) return;
   const prev = activePointers.get(e.pointerId);
   activePointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (downPos && Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]) > 8) pointerMoved = true;
   if (activePointers.size === 1) {
     cam.tTheta -= (e.clientX - prev[0]) * 0.006;
     cam.tPhi = clampPhi(cam.tPhi - (e.clientY - prev[1]) * 0.006);
@@ -909,14 +1096,21 @@ canvas.addEventListener('pointermove', e => {
   }
 });
 function endPointer(e) {
+  if (!activePointers.has(e.pointerId)) return;
+  if (e.type === 'pointerup' && !wasPinch && !pointerMoved && downPos && Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]) <= 8) {
+    focusOn(pickAt(e.clientX, e.clientY));
+  }
   activePointers.delete(e.pointerId);
   if (activePointers.size < 2) pinchStart = null;
+  if (!activePointers.size) downPos = null;
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
-addEventListener('wheel', e => {
+canvas.addEventListener('lostpointercapture', endPointer);
+canvas.addEventListener('wheel', e => {
   autoRotate = false;
-  cam.tRadius *= 1 + e.deltaY * 0.001;
+  const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+  cam.tRadius *= Math.exp(Math.max(-0.5, Math.min(0.5, delta * 0.001)));
 }, { passive: true });
 
 /* ============ 主循环 ============ */
@@ -929,7 +1123,7 @@ function animate() {
     p.pivot.rotation.y += p.speed * dt * 0.25 * ts;
     p.mesh.rotation.y += p.spin * dt * (ts === 0 ? 0 : Math.max(ts * 0.5, 1));
   }
-  sun.rotation.y += dt * 0.04 * (ts || 0.2);
+  sun.rotation.y += dt * 0.04 * ts;
   if (autoRotate && gestureMode === 'idle') cam.tTheta += dt * 0.05;
   applyCamera(dt);
   composer.render();
